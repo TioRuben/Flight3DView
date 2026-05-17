@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Crosshair, Pause, Play, Upload } from 'lucide-react'
+import { Crosshair, Pause, Play, Upload, Video } from 'lucide-react'
 
 import { Button } from '#/components/ui/button.tsx'
 import { Slider } from '#/components/ui/slider.tsx'
@@ -19,6 +19,7 @@ type Props = {
   onSeekSeconds: (s: number) => void
   onUploadAnother: () => void
   onRecenter: () => void
+  onExport: () => void
 }
 
 export function TransportControls({
@@ -30,6 +31,7 @@ export function TransportControls({
   onSeekSeconds,
   onUploadAnother,
   onRecenter,
+  onExport,
 }: Props) {
   const [seekDrag, setSeekDrag] = useState<number | null>(null)
   const displaySeconds = seekDrag ?? state.currentSeconds
@@ -92,16 +94,28 @@ export function TransportControls({
             </Button>
           </div>
 
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onUploadAnother}
-            className="sm:order-last"
-          >
-            <Upload className="size-4" />
-            Load another
-          </Button>
+          <div className="flex items-center gap-2 sm:order-last">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onExport}
+              aria-label="Export video"
+              title="Export video"
+            >
+              <Video className="size-4" />
+              Export
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onUploadAnother}
+            >
+              <Upload className="size-4" />
+              Load another
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-1 items-center gap-3">

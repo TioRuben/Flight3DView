@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Viewer as CesiumViewerType } from 'cesium'
 
 import { CesiumViewer } from '#/components/cesium-viewer.tsx'
+import { ExportVideoDialog } from '#/components/export-video-dialog.tsx'
 import { IonTokenSetup } from '#/components/ion-token-setup.tsx'
 import { SettingsButton } from '#/components/settings-button.tsx'
 import { TrackUploadDialog } from '#/components/track-upload-dialog.tsx'
@@ -17,6 +18,7 @@ export function App() {
   const { token, hydrated, save } = useIonToken()
   const [showSettings, setShowSettings] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
+  const [showExport, setShowExport] = useState(false)
   const [viewer, setViewer] = useState<CesiumViewerType | null>(null)
   const [track, setTrack] = useState<Track | null>(null)
   const [handle, setHandle] = useState<PlaybackHandle | null>(null)
@@ -74,6 +76,18 @@ export function App() {
           onSeekSeconds={playback.seekSeconds}
           onUploadAnother={() => setShowUpload(true)}
           onRecenter={playback.recenter}
+          onExport={() => setShowExport(true)}
+        />
+      ) : null}
+
+      {viewer && track && handle ? (
+        <ExportVideoDialog
+          open={showExport}
+          onOpenChange={setShowExport}
+          viewer={viewer}
+          handle={handle}
+          multiplier={playback.state.multiplier}
+          trackName={track.meta.name}
         />
       ) : null}
 

@@ -22,6 +22,13 @@ export type PlaybackHandle = {
   isUserOverridden: () => boolean
   recenter: () => void
   dispose: () => void
+  // Detach live follow + input listeners so the caller can drive the clock
+  // and render frames deterministically (used by the video export path).
+  setExportMode: (enabled: boolean) => void
+  // Snap the camera to the user's current relative pose at the given track
+  // time and force a synchronous render. Caller is responsible for then
+  // reading viewer.canvas pixels (e.g. via CanvasSource.add()).
+  renderFrameAt: (time: JulianDate) => void
 }
 
 const ORANGE = Color.fromCssColorString('#fb923c')
@@ -32,7 +39,10 @@ const DEFAULT_CAMERA_PITCH = CesiumMath.toRadians(-22)
 // Per-frame smoothing alpha — higher = snappier, lower = silkier but laggier.
 const FOLLOW_SMOOTH_ALPHA = 0.12
 
-export function attachTrack(viewer: CesiumViewerType, track: Track): PlaybackHandle {
+export function attachTrack(
+  viewer: CesiumViewerType,
+  track: Track,
+): PlaybackHandle {
   const samples = track.samples
   if (samples.length < 2) {
     throw new Error('Track has fewer than 2 samples; cannot play')
@@ -100,6 +110,8 @@ export function attachTrack(viewer: CesiumViewerType, track: Track): PlaybackHan
   let headingOffset = 0
   let flyToActive = true
   let userOverride = false
+  // First-frame snap flag for export mode; reset by setExportMode(true).
+  let exportSmoothPrimed = false
 
   // Tracking "is the user actively manipulating the camera right now". This
   // is distinct from userOverride (a sticky "manual mode" flag) — we need
@@ -132,14 +144,32 @@ export function attachTrack(viewer: CesiumViewerType, track: Track): PlaybackHan
     userOverride = true
   }
   const canvas = viewer.canvas
-  canvas.addEventListener('pointerdown', onPointerDown)
-  canvas.addEventListener('pointermove', onPointerMove)
-  canvas.addEventListener('wheel', onWheel, { passive: true })
-  canvas.addEventListener('touchmove', onTouchMove, { passive: true })
-  // pointerup/cancel on window so we still catch the release even if the
-  // pointer leaves the canvas mid-drag.
-  window.addEventListener('pointerup', onPointerUp)
-  window.addEventListener('pointercancel', onPointerUp)
+
+  let listenersAttached = false
+  const attachListeners = () => {
+    if (listenersAttached) return
+    listenersAttached = true
+    viewer.scene.preRender.addEventListener(followListener)
+    canvas.addEventListener('pointerdown', onPointerDown)
+    canvas.addEventListener('pointermove', onPointerMove)
+    canvas.addEventListener('wheel', onWheel, { passive: true })
+    canvas.addEventListener('touchmove', onTouchMove, { passive: true })
+    // pointerup/cancel on window so we still catch the release even if the
+    // pointer leaves the canvas mid-drag.
+    window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('pointercancel', onPointerUp)
+  }
+  const detachListeners = () => {
+    if (!listenersAttached) return
+    listenersAttached = false
+    viewer.scene.preRender.removeEventListener(followListener)
+    canvas.removeEventListener('pointerdown', onPointerDown)
+    canvas.removeEventListener('pointermove', onPointerMove)
+    canvas.removeEventListener('wheel', onWheel)
+    canvas.removeEventListener('touchmove', onTouchMove)
+    window.removeEventListener('pointerup', onPointerUp)
+    window.removeEventListener('pointercancel', onPointerUp)
+  }
 
   const followListener = () => {
     // Don't fight the initial flyTo — let it finish before we lock onto
@@ -167,15 +197,31 @@ export function attachTrack(viewer: CesiumViewerType, track: Track): PlaybackHan
         headingOffset = camera.heading - aircraftHeading
       } else {
         const targetHeading = aircraftHeading + headingOffset
-        smoothedHeading = lerpAngle(smoothedHeading, targetHeading, FOLLOW_SMOOTH_ALPHA)
+        smoothedHeading = lerpAngle(
+          smoothedHeading,
+          targetHeading,
+          FOLLOW_SMOOTH_ALPHA,
+        )
       }
     } else {
       const targetHeading = headingAt(samples, headings, tMs)
-      smoothedHeading = lerpAngle(smoothedHeading, targetHeading, FOLLOW_SMOOTH_ALPHA)
+      smoothedHeading = lerpAngle(
+        smoothedHeading,
+        targetHeading,
+        FOLLOW_SMOOTH_ALPHA,
+      )
       // After a recenter, ease pitch/range back to defaults instead of
       // snapping (heading is already eased by lerpAngle above).
-      userPitch = CesiumMath.lerp(userPitch, DEFAULT_CAMERA_PITCH, FOLLOW_SMOOTH_ALPHA)
-      userRange = CesiumMath.lerp(userRange, DEFAULT_CAMERA_RANGE, FOLLOW_SMOOTH_ALPHA)
+      userPitch = CesiumMath.lerp(
+        userPitch,
+        DEFAULT_CAMERA_PITCH,
+        FOLLOW_SMOOTH_ALPHA,
+      )
+      userRange = CesiumMath.lerp(
+        userRange,
+        DEFAULT_CAMERA_RANGE,
+        FOLLOW_SMOOTH_ALPHA,
+      )
     }
 
     camera.lookAt(
@@ -184,7 +230,7 @@ export function attachTrack(viewer: CesiumViewerType, track: Track): PlaybackHan
     )
   }
 
-  viewer.scene.preRender.addEventListener(followListener)
+  attachListeners()
 
   // Initial framing: fly to where the track starts. The follow listener
   // ignores its frames during this flight via flyToActive.
@@ -213,14 +259,49 @@ export function attachTrack(viewer: CesiumViewerType, track: Track): PlaybackHan
     recenter: () => {
       userOverride = false
     },
+    setExportMode: (enabled) => {
+      if (enabled) {
+        detachListeners()
+        // Reset on the next frame so it snaps to the desired target and then
+        // smooths from there. Without this the first export frame would
+        // inherit whatever residual smoothing state live mode left behind.
+        exportSmoothPrimed = false
+      } else {
+        attachListeners()
+      }
+    },
+    renderFrameAt: (time) => {
+      clock.currentTime = time.clone()
+      const targetPos = positionProperty.getValue(time)
+      if (!targetPos) return
+      const tMs = JulianDate.toDate(time).getTime()
+      const aircraftHeading = headingAt(samples, headings, tMs)
+      const targetHeading = userOverride
+        ? aircraftHeading + headingOffset
+        : aircraftHeading
+      // Match live-playback smoothing so headings table noise / sample-boundary
+      // inflections don't manifest as per-frame tremor in the exported video.
+      if (!exportSmoothPrimed) {
+        smoothedHeading = targetHeading
+        exportSmoothPrimed = true
+      } else {
+        smoothedHeading = lerpAngle(
+          smoothedHeading,
+          targetHeading,
+          FOLLOW_SMOOTH_ALPHA,
+        )
+      }
+      camera.lookAt(
+        targetPos,
+        new HeadingPitchRange(smoothedHeading, userPitch, userRange),
+      )
+      // viewer.render() advances DataSourceDisplay so the aircraft entity
+      // (billboard/point/path) snaps to the new clock time. scene.render()
+      // alone would leave entities frozen at their previous position.
+      viewer.render()
+    },
     dispose: () => {
-      viewer.scene.preRender.removeEventListener(followListener)
-      canvas.removeEventListener('pointerdown', onPointerDown)
-      canvas.removeEventListener('pointermove', onPointerMove)
-      canvas.removeEventListener('wheel', onWheel)
-      canvas.removeEventListener('touchmove', onTouchMove)
-      window.removeEventListener('pointerup', onPointerUp)
-      window.removeEventListener('pointercancel', onPointerUp)
+      detachListeners()
       camera.lookAtTransform(Matrix4.IDENTITY)
       viewer.entities.remove(aircraft)
       clock.shouldAnimate = false
