@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
 import type { Viewer as CesiumViewerType } from 'cesium'
 
 import { CesiumViewer } from '#/components/cesium-viewer.tsx'
-import { ClientOnly } from '#/components/client-only.tsx'
 import { IonTokenSetup } from '#/components/ion-token-setup.tsx'
 import { SettingsButton } from '#/components/settings-button.tsx'
 import { TrackUploadDialog } from '#/components/track-upload-dialog.tsx'
@@ -15,17 +13,7 @@ import { attachTrack } from '#/lib/playback/playback.ts'
 import type { PlaybackHandle } from '#/lib/playback/playback.ts'
 import type { Track } from '#/lib/parsers/index.ts'
 
-export const Route = createFileRoute('/')({ component: Home })
-
-function Home() {
-  return (
-    <ClientOnly fallback={<LoadingScreen />}>
-      <App />
-    </ClientOnly>
-  )
-}
-
-function App() {
+export function App() {
   const { token, hydrated, save } = useIonToken()
   const [showSettings, setShowSettings] = useState(false)
   const [showUpload, setShowUpload] = useState(false)

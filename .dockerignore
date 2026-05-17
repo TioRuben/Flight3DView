@@ -1,0 +1,30 @@
+# Don't ship the host's node_modules or any build output — the image
+# rebuilds these from yarn.lock inside the build stage.
+node_modules
+dist
+dist-ssr
+.output
+.nitro
+.vinxi
+.tanstack
+.wrangler
+
+# Version control & editor / tool config
+.git
+.gitignore
+.vscode
+.claude
+.cursorrules
+
+# Local env / OS artifacts
+.env
+*.local
+.DS_Store
+
+# Docs aren't needed by the build
+README.md
+LICENSE
+
+# Misc generated state
+__unconfig*
+todos.json

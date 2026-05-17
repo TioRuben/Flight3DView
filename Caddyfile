@@ -1,0 +1,20 @@
+:80 {
+	root * /srv
+
+	encode zstd gzip
+
+	# Aggressively cache Vite's hashed assets (filenames change on every build).
+	@hashed path /assets/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+	# Cesium's static files are versioned with the package — long cache too.
+	@cesium path /cesium/*
+	header @cesium Cache-Control "public, max-age=31536000, immutable"
+
+	# SPA fallback: any unmatched route serves index.html so client routing
+	# (if added later) keeps working on deep links. Static files still win
+	# because file_server checks the filesystem first.
+	try_files {path} /index.html
+
+	file_server
+}
