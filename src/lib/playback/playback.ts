@@ -93,6 +93,11 @@ export function attachTrack(viewer: CesiumViewerType, track: Track): PlaybackHan
   let smoothedHeading = headings[0]
   let userPitch = DEFAULT_CAMERA_PITCH
   let userRange = DEFAULT_CAMERA_RANGE
+  // Camera heading minus aircraft heading at the moment the user last
+  // positioned the view. While in manual mode we re-apply this offset every
+  // frame so the camera keeps showing the same side of the aircraft through
+  // turns, instead of holding an absolute compass heading.
+  let headingOffset = 0
   let flyToActive = true
   let userOverride = false
 
@@ -147,16 +152,22 @@ export function attachTrack(viewer: CesiumViewerType, track: Track): PlaybackHan
     if (!targetPos) return
 
     if (userOverride) {
+      const aircraftHeading = headingAt(samples, headings, tMs)
       // Only resample the camera while the user is actively dragging/zooming.
-      // Once they release, freeze the chosen offset — otherwise distance to
-      // the moving aircraft would creep up each frame and the view would
-      // drift outward. The lookAt below still keeps the aircraft anchored at
-      // the frozen offset.
+      // Once they release, freeze the chosen pitch/range — otherwise distance
+      // to the moving aircraft would creep up each frame and the view would
+      // drift outward. Heading is the exception: we keep it locked relative
+      // to the aircraft (via headingOffset) so the same side stays visible
+      // through turns.
       if (isInteracting()) {
         const range = Cartesian3.distance(camera.positionWC, targetPos)
         if (Number.isFinite(range) && range > 0) userRange = range
         userPitch = camera.pitch
         smoothedHeading = camera.heading
+        headingOffset = camera.heading - aircraftHeading
+      } else {
+        const targetHeading = aircraftHeading + headingOffset
+        smoothedHeading = lerpAngle(smoothedHeading, targetHeading, FOLLOW_SMOOTH_ALPHA)
       }
     } else {
       const targetHeading = headingAt(samples, headings, tMs)
