@@ -1,5 +1,5 @@
 {
-  "projectName": "3d-flight",
+  "projectName": "flight3d",
   "mode": "file-router",
   "typescript": true,
   "packageManager": "yarn",

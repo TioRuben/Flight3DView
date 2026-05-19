@@ -5,10 +5,10 @@ import cesium from 'vite-plugin-cesium'
 import { VitePWA } from 'vite-plugin-pwa'
 import type { ManifestOptions } from 'vite-plugin-pwa'
 
-const APP_NAME = '3D Flight Replay'
-const APP_SHORT_NAME = '3D Flight'
+const APP_NAME = 'Flight3d Replay'
+const APP_SHORT_NAME = 'Flight3d'
 const APP_DESCRIPTION =
-  'Replay GPS tracks as a 3D flight over a Cesium globe. Drop in GPX, KML, IGC, or Flightradar24 CSV.'
+  'Replay GPS tracks as a Flight3d over a Cesium globe. Drop in GPX, KML, IGC, or Flightradar24 CSV.'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
