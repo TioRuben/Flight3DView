@@ -44,3 +44,30 @@ export function listenForLaunchedFiles(
 
   return () => {}
 }
+
+// Listen for Web Share Target messages from the service worker. The service
+// worker posts `{ type: 'share-target', file }` where `file` is a `File`.
+export function listenForSharedFiles(
+  onTrack: (track: Track) => void,
+  onError: (message: string) => void,
+): () => void {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return () => {}
+
+  const handler = async (ev: MessageEvent) => {
+    try {
+      const data = ev.data
+      if (!data || data.type !== 'share-target') return
+      const file = data.file as File | undefined | null
+      if (!file) return
+      const track = await parseTrackFile(file)
+      onTrack(track)
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to open shared file')
+    }
+  }
+
+  navigator.serviceWorker.addEventListener('message', handler)
+  return () => {
+    navigator.serviceWorker.removeEventListener('message', handler)
+  }
+}

@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => {
       viteReact(),
       cesium(),
       VitePWA({
+        strategies: 'injectManifest',
+        srcDir: 'src',
+        filename: 'sw.ts',
         registerType: 'autoUpdate',
         injectRegister: null,
         includeAssets: ['favicon.ico', 'robots.txt', 'logo192.png', 'logo512.png'],
@@ -61,6 +64,31 @@ export default defineConfig(({ mode }) => {
               icons: [{ src: 'logo192.png', sizes: '192x192', type: 'image/png' }],
             },
           ],
+          // Support incoming shares from other Android apps (Share sheet).
+          // Web Share Target requires a `share_target` manifest entry. The
+          // service worker (src/sw.ts) will receive the POST at `/share` and
+          // forward the file to the client via postMessage.
+          share_target: {
+            action: '/share',
+            method: 'POST',
+            enctype: 'multipart/form-data',
+            params: {
+              files: [
+                {
+                  name: 'file',
+                  accept: [
+                    '.gpx',
+                    '.kml',
+                    '.igc',
+                    '.csv',
+                    'application/gpx+xml',
+                    'application/vnd.google-earth.kml+xml',
+                    'text/csv',
+                  ],
+                },
+              ],
+            },
+          },
         } as unknown as ManifestOptions,
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
