@@ -10,6 +10,7 @@ import { TransportControls } from '#/components/transport-controls.tsx'
 import { UploadFab } from '#/components/upload-fab.tsx'
 import { useIonToken } from '#/hooks/use-ion-token.ts'
 import { usePlaybackState } from '#/hooks/use-playback-state.ts'
+import { listenForLaunchedFiles } from '#/lib/pwa.ts'
 import { attachTrack } from '#/lib/playback/playback.ts'
 import type { PlaybackHandle } from '#/lib/playback/playback.ts'
 import type { Track } from '#/lib/parsers/index.ts'
@@ -18,6 +19,7 @@ export function App() {
   const { token, hydrated, save } = useIonToken()
   const [showSettings, setShowSettings] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
+  const [launchError, setLaunchError] = useState<string | null>(null)
   const [showExport, setShowExport] = useState(false)
   const [viewer, setViewer] = useState<CesiumViewerType | null>(null)
   const [track, setTrack] = useState<Track | null>(null)
@@ -42,6 +44,17 @@ export function App() {
   }, [viewer, track])
 
   const playback = usePlaybackState(viewer, handle)
+
+  useEffect(() => {
+    return listenForLaunchedFiles(
+      (next) => {
+        setTrack(next)
+        setShowUpload(false)
+        setLaunchError(null)
+      },
+      (message) => setLaunchError(message),
+    )
+  }, [])
 
   if (!hydrated) return <LoadingScreen />
 
@@ -108,6 +121,22 @@ export function App() {
           }}
           onCancel={() => setShowSettings(false)}
         />
+      ) : null}
+
+      {launchError ? (
+        <div
+          role="alert"
+          className="absolute left-1/2 top-4 z-50 -translate-x-1/2 rounded-md bg-destructive px-4 py-2 text-sm text-destructive-foreground shadow-md"
+        >
+          <span>Could not open file: {launchError}</span>
+          <button
+            type="button"
+            className="ml-3 underline"
+            onClick={() => setLaunchError(null)}
+          >
+            Dismiss
+          </button>
+        </div>
       ) : null}
     </div>
   )

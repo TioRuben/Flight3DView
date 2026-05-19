@@ -2,7 +2,7 @@
 
 Replay GPS tracks as a cinematic 3D flight over a [Cesium](https://cesium.com/) globe, right in your browser.
 
-Drop in a `.gpx`, `.kml`/`.kmz`, `.igc`, or Flightradar24 CSV export and watch the aircraft trace your route across real terrain and imagery — with full play / pause / seek / speed / reverse controls. Export the replay as an **MP4 video** in 720p or 1080p, landscape or portrait, when you want to share it.
+Drop in a `.gpx`, `.kml`, `.igc`, or Flightradar24 CSV export and watch the aircraft trace your route across real terrain and imagery — with full play / pause / seek / speed / reverse controls. Export the replay as an **MP4 video** in 720p or 1080p, landscape or portrait, when you want to share it.
 
 <p align="center">
   <img src="img/desktop.png" alt="Desktop view — track replay with transport controls" width="780" />
@@ -12,11 +12,19 @@ Drop in a `.gpx`, `.kml`/`.kmz`, `.igc`, or Flightradar24 CSV export and watch t
   <img src="img/mobile.png" alt="Mobile view" width="240" />
 </p>
 
+## Demo
+
+Try it live at **[flight3d.rubenhernandez.es](https://flight3d.rubenhernandez.es)**.
+
+You'll need a free [Cesium ion](https://ion.cesium.com/tokens) token on first launch — see [tokens stay on your device](#100-client-side--your-tokens-stay-on-your-device) below for why.
+
+The demo is also **installable as a PWA**: in Chrome/Edge, look for the install icon in the address bar; on iOS Safari, *Share → Add to Home Screen*. Once installed, you can right-click a `.gpx`, `.kml`, `.igc`, or `.csv` file and open it directly with the app (Chromium desktop only).
+
 ## What it does
 
 - **Loads GPS tracks** from common formats:
   - GPX (`.gpx`)
-  - KML / KMZ (`.kml`, `.kmz`)
+  - KML (`.kml`)
   - IGC (`.igc`) — paraglider / glider flight logs
   - Flightradar24 CSV exports (`.csv`)
 - **Renders the route in 3D** on a Cesium globe with real terrain and satellite imagery.
@@ -25,6 +33,7 @@ Drop in a `.gpx`, `.kml`/`.kmz`, `.igc`, or Flightradar24 CSV export and watch t
 - **Camera that turns with the aircraft**: when you manually pick a viewing angle, the camera keeps that same side visible through banks and turns instead of snapping to an absolute compass heading.
 - **MP4 export** of the current playback — encoded entirely in your browser via WebCodecs, with no upload or server round-trip. Pick 720p or 1080p in landscape or portrait, 25 or 30 fps. The camera pose in the exported video matches whatever you've set up on screen, and the speed multiplier you're watching at is baked into the video (so 60 minutes of track at 10× becomes a 6-minute clip).
 - **Mobile-friendly UI** — controls reflow for narrow screens.
+- **Installable as a PWA** — add it to your home screen / desktop. On Chromium-based browsers the installed app is also registered as a handler for `.gpx`, `.kml`, `.igc`, and `.csv` files, so you can right-click a track in your file manager and open it directly.
 
 ## 100% client-side — your tokens stay on your device
 
@@ -48,6 +57,7 @@ You can change or clear the token any time via the gear icon in the top-right co
 4. Hit **play**. Scrub the timeline, adjust speed, or drag the camera to look around. The crosshair button snaps the camera back to the aircraft.
 5. (Optional) Click **Export** to save the replay as an MP4. Pick resolution and frame rate; the encode runs in your browser and the file downloads when it's done. MP4 export needs a recent Chrome/Edge, Safari 16.4+, or Firefox 130+ (browsers with WebCodecs).
 6. Load another track at any time with the **Load another** button.
+7. (Optional) Install the app from your browser's address bar (Chrome/Edge) or *Share → Add to Home Screen* (iOS Safari). Once installed, opening a `.gpx` / `.kml` / `.igc` / `.csv` file from your OS will hand it straight to the app on Chromium desktop browsers.
 
 ## Run with Docker
 
