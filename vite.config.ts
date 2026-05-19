@@ -27,6 +27,10 @@ export default defineConfig(({ mode }) => {
         filename: 'sw.ts',
         registerType: 'autoUpdate',
         injectRegister: null,
+        injectManifest: {
+          // Increase maximum precache size to accommodate Cesium's bundle.
+          maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
+        },
         includeAssets: ['favicon.ico', 'robots.txt', 'logo192.png', 'logo512.png'],
         manifest: {
           id: appUrl ? `${appUrl}/` : '/',
